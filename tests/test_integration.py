@@ -314,3 +314,46 @@ class TestContextManager:
             result = session.run("context manager task")
 
         assert result == "ctx ok"
+
+
+class TestObservationErrorRecovery:
+    def test_screenshot_failure_skips_step_then_recovers(self, mocker, agent_config):
+        """A BrowserError during screenshot should skip the step, not crash the session."""
+        from agent.exceptions import BrowserError
+
+        browser = _patch_browser(mocker)
+        browser.screenshot_base64.side_effect = [
+            BrowserError("page crashed"),
+            "ZmFrZV9wbmc=",  # recovers on next step
+        ]
+        done = make_mock_stream({"action": "done", "result": "recovered", "thought": "done"})
+        _patch_anthropic(mocker, done)
+
+        result = AgentSession(config=agent_config).run("task")
+        assert result == "recovered"
+
+    def test_browser_closed_after_observation_error(self, mocker, agent_config):
+        from agent.exceptions import BrowserError
+
+        agent_config.max_steps = 1
+        browser = _patch_browser(mocker)
+        browser.screenshot_base64.side_effect = BrowserError("crash")
+
+        with pytest.raises(MaxStepsExceededError):
+            AgentSession(config=agent_config).run("task")
+
+        browser.close.assert_called_once()
+
+
+class TestNonNumericCoordinates:
+    def test_click_with_non_numeric_coords_skips_step(self, mocker, agent_config):
+        """Claude returning non-numeric x/y should skip the step, not crash."""
+        _patch_browser(mocker)
+        bad_click = make_mock_stream(
+            {"action": "click", "x": "center", "y": "top", "thought": "click"}
+        )
+        done = make_mock_stream({"action": "done", "result": "recovered", "thought": "done"})
+        _patch_anthropic(mocker, bad_click, done)
+
+        result = AgentSession(config=agent_config).run("task")
+        assert result == "recovered"

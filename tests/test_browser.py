@@ -166,3 +166,49 @@ class TestBrowserClose:
     def test_close_does_not_raise_on_error(self, browser, mock_playwright):
         mock_playwright["browser"].close.side_effect = RuntimeError("already closed")
         browser.close()  # should not raise
+
+
+class TestBrowserActionErrors:
+    """All action methods must raise BrowserError (not raw Playwright errors)."""
+
+    def test_click_raises_browser_error_on_failure(self, browser, mock_playwright):
+        from agent.exceptions import BrowserError
+
+        mock_playwright["page"].mouse.click.side_effect = RuntimeError("element not found")
+        with pytest.raises(BrowserError, match="Click"):
+            browser.click(100, 200)
+
+    def test_type_text_raises_browser_error_on_failure(self, browser, mock_playwright):
+        from agent.exceptions import BrowserError
+
+        mock_playwright["page"].keyboard.type.side_effect = RuntimeError("page closed")
+        with pytest.raises(BrowserError, match="Type"):
+            browser.type_text("hello")
+
+    def test_press_key_raises_browser_error_on_failure(self, browser, mock_playwright):
+        from agent.exceptions import BrowserError
+
+        mock_playwright["page"].keyboard.press.side_effect = RuntimeError("detached")
+        with pytest.raises(BrowserError, match="Press key"):
+            browser.press_key("Enter")
+
+    def test_scroll_raises_browser_error_on_failure(self, browser, mock_playwright):
+        from agent.exceptions import BrowserError
+
+        mock_playwright["page"].mouse.wheel.side_effect = RuntimeError("crash")
+        with pytest.raises(BrowserError, match="Scroll"):
+            browser.scroll("down", 2)
+
+    def test_screenshot_raises_browser_error_on_failure(self, browser, mock_playwright):
+        from agent.exceptions import BrowserError
+
+        mock_playwright["page"].screenshot.side_effect = RuntimeError("page crashed")
+        with pytest.raises(BrowserError, match="Screenshot"):
+            browser.screenshot_base64()
+
+    def test_page_title_raises_browser_error_on_failure(self, browser, mock_playwright):
+        from agent.exceptions import BrowserError
+
+        mock_playwright["page"].title.side_effect = RuntimeError("context destroyed")
+        with pytest.raises(BrowserError, match="page title"):
+            browser.page_title()

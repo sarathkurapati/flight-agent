@@ -81,3 +81,19 @@ class TestAgentConfigValidation:
     def test_headless_flag(self, monkeypatch, tmp_path):
         cfg = self._make(monkeypatch, tmp_path, headless=True)
         assert cfg.headless is True
+
+    def test_thinking_budget_below_max_tokens_is_valid(self, monkeypatch, tmp_path):
+        cfg = self._make(monkeypatch, tmp_path, thinking_budget_tokens=2048, max_tokens=4096)
+        assert cfg.thinking_budget_tokens == 2048
+
+    def test_thinking_budget_equal_to_max_tokens_raises(self, monkeypatch, tmp_path):
+        with pytest.raises(ValidationError):
+            self._make(monkeypatch, tmp_path, thinking_budget_tokens=4096, max_tokens=4096)
+
+    def test_thinking_budget_above_max_tokens_raises(self, monkeypatch, tmp_path):
+        with pytest.raises(ValidationError):
+            self._make(monkeypatch, tmp_path, thinking_budget_tokens=5000, max_tokens=4096)
+
+    def test_thinking_budget_none_is_default(self, monkeypatch, tmp_path):
+        cfg = self._make(monkeypatch, tmp_path)
+        assert cfg.thinking_budget_tokens is None

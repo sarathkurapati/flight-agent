@@ -177,9 +177,14 @@ class AgentSession:
         history: list[str],
         state: SessionState,
     ) -> str | None:
-        screenshot = browser.screenshot_base64()
-        url = browser.current_url()
-        title = browser.page_title()
+        try:
+            screenshot = browser.screenshot_base64()
+            url = browser.current_url()
+            title = browser.page_title()
+        except BrowserError as exc:
+            logger.warning("observation_error | step={} err={}", step, exc)
+            history.append(f"Step {step}: (observation error — {str(exc)[:80]})")
+            return None
 
         logger.info("step={} url={!r} title={!r}", step, url, title[:60])
 
@@ -223,7 +228,7 @@ class AgentSession:
         # --- Execute browser action, recover from transient browser errors ---
         try:
             self._execute(browser, action)
-        except BrowserError as exc:
+        except (BrowserError, ValueError, TypeError) as exc:
             logger.warning("browser_error | step={} err={}", step, exc)
             history.append(f"Step {step}: (browser error — {str(exc)[:80]})")
             return None

@@ -72,28 +72,43 @@ class BrowserController:
 
     def click(self, x: int, y: int) -> None:
         logger.debug("click | x={} y={}", x, y)
-        self._page.mouse.click(x, y)
-        self._page.wait_for_timeout(self._cfg.action_delay_ms)
+        try:
+            self._page.mouse.click(x, y)
+            self._page.wait_for_timeout(self._cfg.action_delay_ms)
+        except Exception as exc:
+            raise BrowserError(f"Click at ({x}, {y}) failed: {exc}") from exc
 
     def type_text(self, text: str) -> None:
         logger.debug("type | text={!r}", text[:60])
-        self._page.keyboard.type(text, delay=50)
-        self._page.wait_for_timeout(self._cfg.action_delay_ms // 2)
+        try:
+            self._page.keyboard.type(text, delay=50)
+            self._page.wait_for_timeout(self._cfg.action_delay_ms // 2)
+        except Exception as exc:
+            raise BrowserError(f"Type text failed: {exc}") from exc
 
     def press_key(self, key: str) -> None:
         logger.debug("press_key | key={}", key)
-        self._page.keyboard.press(key)
-        self._page.wait_for_timeout(self._cfg.action_delay_ms)
+        try:
+            self._page.keyboard.press(key)
+            self._page.wait_for_timeout(self._cfg.action_delay_ms)
+        except Exception as exc:
+            raise BrowserError(f"Press key '{key}' failed: {exc}") from exc
 
     def scroll(self, direction: str, amount: int = 3) -> None:
         logger.debug("scroll | direction={} amount={}", direction, amount)
         delta = -300 * amount if direction == "up" else 300 * amount
-        self._page.mouse.wheel(0, delta)
-        self._page.wait_for_timeout(self._cfg.action_delay_ms)
+        try:
+            self._page.mouse.wheel(0, delta)
+            self._page.wait_for_timeout(self._cfg.action_delay_ms)
+        except Exception as exc:
+            raise BrowserError(f"Scroll {direction} failed: {exc}") from exc
 
     def wait(self, seconds: float) -> None:
         logger.debug("wait | seconds={}", seconds)
-        self._page.wait_for_timeout(int(seconds * 1_000))
+        try:
+            self._page.wait_for_timeout(int(seconds * 1_000))
+        except Exception as exc:
+            raise BrowserError(f"Wait failed: {exc}") from exc
 
     # ------------------------------------------------------------------ #
     # Observation                                                          #
@@ -103,15 +118,24 @@ class BrowserController:
         self._step += 1
         ts = datetime.now().strftime("%H%M%S")
         path = self._screenshot_dir / f"step_{self._step:03d}_{ts}.png"
-        png_bytes = self._page.screenshot(path=str(path), full_page=False)
+        try:
+            png_bytes = self._page.screenshot(path=str(path), full_page=False)
+        except Exception as exc:
+            raise BrowserError(f"Screenshot failed: {exc}") from exc
         logger.debug("screenshot saved | path={}", path)
         return base64.b64encode(png_bytes).decode("utf-8")
 
     def current_url(self) -> str:
-        return self._page.url
+        try:
+            return self._page.url
+        except Exception as exc:
+            raise BrowserError(f"Could not read URL: {exc}") from exc
 
     def page_title(self) -> str:
-        return self._page.title()
+        try:
+            return self._page.title()
+        except Exception as exc:
+            raise BrowserError(f"Could not read page title: {exc}") from exc
 
     # ------------------------------------------------------------------ #
     # Lifecycle                                                            #
