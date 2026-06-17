@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Install Chromium (for integration tests)
+        run: playwright install chromium --with-deps
+
+      - name: Lint — ruff check
+        run: ruff check .
+
+      - name: Format — ruff format
+        run: ruff format --check .
+
+      - name: Type check — mypy
+        run: mypy agent/ main.py api.py
+
+      - name: Tests — pytest with coverage
+        run: pytest --cov --cov-report=term-missing --cov-fail-under=80
+
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: browser-agent:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

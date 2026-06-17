@@ -1,0 +1,32 @@
+services:
+  agent:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # Set API_KEY to require X-API-Key on all agent endpoints.
+      # Leave unset (or empty) to disable auth for private deployments.
+      - API_KEY=${API_KEY:-}
+      - HEADLESS=true
+      - DATA_DIR=/tmp/browser-agent
+      - LOG_LEVEL=INFO
+      - MAX_CONCURRENT_SESSIONS=2
+      - MAX_QUEUED_JOBS=100
+      - RUN_TIMEOUT_SECONDS=660
+    volumes:
+      - agent-data:/tmp/browser-agent
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+
+volumes:
+  agent-data:
