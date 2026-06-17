@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import hmac
 import os
 import signal
 import sqlite3
@@ -42,7 +43,7 @@ _API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 def _check_api_key(key: str | None = Security(_API_KEY_HEADER)) -> None:
     expected = os.getenv("API_KEY")
-    if expected and key != expected:
+    if expected and not hmac.compare_digest(key or "", expected):
         raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key header")
 
 

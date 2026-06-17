@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -62,3 +62,15 @@ class AgentConfig(BaseSettings):
     def _ensure_dir(cls, v: Path) -> Path:
         v.mkdir(parents=True, exist_ok=True)
         return v
+
+    @model_validator(mode="after")
+    def _thinking_budget_fits_max_tokens(self) -> "AgentConfig":
+        if (
+            self.thinking_budget_tokens is not None
+            and self.thinking_budget_tokens >= self.max_tokens
+        ):
+            raise ValueError(
+                f"thinking_budget_tokens ({self.thinking_budget_tokens}) must be less than "
+                f"max_tokens ({self.max_tokens})"
+            )
+        return self

@@ -89,7 +89,7 @@ class BrowserController:
         logger.debug("scroll | direction={} amount={}", direction, amount)
         delta = -300 * amount if direction == "up" else 300 * amount
         self._page.mouse.wheel(0, delta)
-        self._page.wait_for_timeout(500)
+        self._page.wait_for_timeout(self._cfg.action_delay_ms)
 
     def wait(self, seconds: float) -> None:
         logger.debug("wait | seconds={}", seconds)
